@@ -71,3 +71,33 @@ def test_bundled_themes_load():
     for t in bundled:
         assert t.config()["modules"]
         assert t.logo_text()
+
+
+def test_non_object_config_is_a_value_error(homes):
+    live = fastfetch.config_dir()
+    live.mkdir(parents=True)
+    (live / "config.jsonc").write_text("[]")
+    assert fastfetch.load_live() is None
+
+
+def test_backups_sort_by_counter(homes):
+    for name in ("2026-01-01_00-00-00", "2026-01-01_00-00-00-2", "2026-01-01_00-00-00-10", "2025-12-31_23-59-59"):
+        (settings.backups_dir() / name).mkdir(parents=True)
+    assert [b.name for b in fastfetch.backups()] == [
+        "2026-01-01_00-00-00-10", "2026-01-01_00-00-00-2", "2026-01-01_00-00-00", "2025-12-31_23-59-59"]
+
+
+def test_failed_apply_keeps_live_config(homes, monkeypatch):
+    live = fastfetch.config_dir()
+    live.mkdir(parents=True)
+    (live / "config.jsonc").write_text('{"mine": true}')
+    theme = themes.Theme("Cat", "Large", make_theme(homes / "p", "Large-Themes", "Cat"), "fastcat")
+
+    def broken_copy(*a, **k):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(fastfetch.shutil, "copytree", broken_copy)
+    with pytest.raises(OSError):
+        fastfetch._install(theme.path)
+    assert (live / "config.jsonc").read_text() == '{"mine": true}'
+    assert [p.name for p in live.parent.iterdir()] == ["fastfetch"]

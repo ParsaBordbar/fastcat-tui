@@ -2,6 +2,7 @@
 import re
 
 from .colors import RESET, ansi
+from .console import printable
 
 TOKEN_RE = re.compile(r"\$(\d|\$)")
 
@@ -26,7 +27,7 @@ def render(text: str, colors: dict) -> list[str]:
     """Logo lines with ANSI colours, the way fastfetch draws them (colour carries across lines)."""
     current = colors.get("1", "default")
     out = []
-    for line in text.rstrip("\n").splitlines():
+    for line in printable(text).rstrip("\n").splitlines():
         parts, i = [ansi(current)], 0
         for m in TOKEN_RE.finditer(line):
             parts.append(line[i:m.start()])

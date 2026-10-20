@@ -21,6 +21,7 @@ import webbrowser
 from pathlib import Path
 
 from . import __version__, ffconfig, jsonc, settings, themes
+from .console import CONTROL_RE
 
 DEFAULT_URL = "https://parsabordbar.github.io/fastcat-gallery/"
 SUBMIT_URL = "https://github.com/ParsaBordbar/fastcat-gallery/issues/new"
@@ -82,6 +83,28 @@ def check_config(cfg) -> None:
             raise GalleryError(f"refusing to install: the theme uses the '{t}' module, which runs programs")
 
 
+def _check_downloaded(name: str, data: bytes) -> None:
+    if name.endswith(".png"):
+        return
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError:
+        raise GalleryError(f"refusing to install: {name} is not UTF-8 text") from None
+    if CONTROL_RE.search(text.replace("\r\n", "\n")):
+        raise GalleryError(f"refusing to install: {name} contains terminal control characters")
+
+
+def _check_logo_inside(cfg: dict, dest: Path) -> None:
+    """A gallery theme's logo must be one of its own files (or built in), never another file on disk."""
+    lg = cfg.get("logo")
+    if isinstance(lg, str):
+        lg = {"source": lg}
+    if not isinstance(lg, dict) or not isinstance(lg.get("source"), str) or lg.get("type") in themes.BUILTIN_LOGO_TYPES:
+        return
+    if themes.resolve_source(lg["source"], dest).resolve().parent != dest.resolve():
+        raise GalleryError(f"refusing to install: the logo points outside the theme ({lg['source']})")
+
+
 def install(entry: dict) -> themes.Theme:
     """Download a theme's files, check their hashes and config, and save it. Replaces an older copy."""
     code = entry["code"]
@@ -102,11 +125,14 @@ def install(entry: dict) -> themes.Theme:
             data = _get(f"{base_url()}themes/{code}/{name}", MAX_FILE)
             if hashlib.sha256(data).hexdigest() != digest:
                 raise GalleryError(f"{name} does not match the gallery index (try again later)")
+            _check_downloaded(name, data)
             (dest / name).write_bytes(data)
         try:
-            check_config(jsonc.load(dest / "config.jsonc"))
+            cfg = jsonc.load(dest / "config.jsonc")
         except ValueError as e:
             raise GalleryError(f"config.jsonc is not valid: {e}") from None
+        check_config(cfg)
+        _check_logo_inside(cfg, dest)
         final = root / code
         if final.exists():
             shutil.rmtree(final)

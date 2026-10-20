@@ -15,6 +15,7 @@ HIDE_CURSOR = "\033[?25l"
 SHOW_CURSOR = "\033[?25h"
 
 ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
+CONTROL_RE = re.compile(r"[\x00-\x08\x0b-\x1f\x7f-\x9f]")
 _PIECE_RE = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]|.", re.S)
 
 
@@ -25,6 +26,11 @@ def is_tty() -> bool:
 def color(text: str, *codes: str) -> str:
     """Wrap text in ANSI codes when stdout is a terminal, otherwise return it unchanged."""
     return "".join(codes) + text + RESET if sys.stdout.isatty() else text
+
+
+def printable(s) -> str:
+    """str(s) without control characters (keeps tab and newline), for text from untrusted files."""
+    return CONTROL_RE.sub("", str(s))
 
 
 def visible_len(s: str) -> int:

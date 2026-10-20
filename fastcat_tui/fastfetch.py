@@ -1,6 +1,7 @@
 """The live fastfetch config: run it, apply themes, back it up and restore it."""
 import copy
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -8,6 +9,8 @@ import time
 from pathlib import Path
 
 from . import ffconfig, jsonc, settings, themes
+
+_BACKUP_NAME = re.compile(r"(\d{4}-\d\d-\d\d_\d\d-\d\d-\d\d)(?:-(\d+))?")
 
 
 def config_dir() -> Path:
@@ -39,21 +42,32 @@ def backup() -> Path | None:
     return dest
 
 
+def _backup_order(p: Path) -> tuple[str, int]:
+    """Sort key: the timestamp, then the collision counter as a number (so "-10" comes after "-2")."""
+    m = _BACKUP_NAME.fullmatch(p.name)
+    return (m.group(1), int(m.group(2) or 1)) if m else (p.name, 0)
+
+
 def backups() -> list[Path]:
     d = settings.backups_dir()
-    return sorted((p for p in d.iterdir() if p.is_dir()), reverse=True) if d.is_dir() else []
+    return sorted((p for p in d.iterdir() if p.is_dir()), key=_backup_order, reverse=True) if d.is_dir() else []
 
 
 def _install(src: Path) -> Path | None:
     """Back up the live config, then replace it with a copy of src. Returns the backup path."""
     saved = backup()
     dest = config_dir()
-    if dest.is_symlink() or dest.is_file():
-        dest.unlink()
-    elif dest.exists():
-        shutil.rmtree(dest)
     dest.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copytree(src, dest, symlinks=True)
+    staged = Path(tempfile.mkdtemp(prefix=".fastfetch-", dir=dest.parent)) / "fastfetch"
+    try:
+        shutil.copytree(src, staged, symlinks=True)
+        if dest.is_symlink() or dest.is_file():
+            dest.unlink()
+        elif dest.exists():
+            shutil.rmtree(dest)
+        staged.rename(dest)
+    finally:
+        shutil.rmtree(staged.parent, ignore_errors=True)
     return saved
 
 

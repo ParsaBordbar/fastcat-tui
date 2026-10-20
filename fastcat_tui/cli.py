@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 from . import __version__, fastfetch, ffconfig, gallery, image, logo, settings, themes
-from .console import GREEN, RED, backup_note, color, is_tty
+from .console import GREEN, RED, backup_note, color, is_tty, printable
 
 USAGE = """\
 Browse, customise and create fastfetch themes.
@@ -42,6 +42,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--trim", type=int, default=0, help="shrink the shape by N px (removes sticker borders)")
     p.add_argument("--name", help="theme name (default: image file name)")
     p.add_argument("--apply", action="store_true", help="apply the new theme right away")
+    p.add_argument("--force", action="store_true", help="overwrite a theme of yours with the same name")
     sub.add_parser("gallery", help="list themes in the community gallery")
     p = sub.add_parser("get", help="install a gallery theme by its code")
     p.add_argument("code", help="the code shown on the gallery site")
@@ -86,8 +87,10 @@ def cmd_apply(args) -> None:
 def cmd_logo(args) -> None:
     if not image.have_pillow():
         sys.exit("image -> logo needs Pillow: pip install pillow")
-    text, palette, used = image.convert(args.image, args.width, args.mode, args.colors, args.trim)
     name = themes.safe_name(args.name or Path(args.image).stem.title())
+    if themes.mine_dir(name).exists() and not args.force:
+        sys.exit(f"you already have a theme called {name!r}: pick another --name, or pass --force to overwrite it")
+    text, palette, used = image.convert(args.image, args.width, args.mode, args.colors, args.trim)
     theme, _ = themes.save_logo_theme(name, text, palette)
     print("\n".join(logo.render(text, palette)) if is_tty() else logo.plain(text), end="\n\n")
     w, h = logo.size(text)
@@ -99,7 +102,7 @@ def cmd_logo(args) -> None:
 def cmd_gallery(args) -> None:
     for e in sorted(gallery.fetch_index(), key=lambda e: e["code"]):
         mark = "  installed" if gallery.installed(e["code"]) else ""
-        print(f"{e['code']:24} {str(e.get('name', ''))[:28]:28} by {str(e.get('author', ''))[:20]}{mark}")
+        print(f"{e['code']:24} {printable(e.get('name', ''))[:28]:28} by {printable(e.get('author', ''))[:20]}{mark}")
 
 
 def cmd_get(args) -> None:
@@ -107,7 +110,8 @@ def cmd_get(args) -> None:
     if not entry:
         sys.exit(f"no gallery theme with code {args.code!r} (see: fastcat-tui gallery)")
     t = gallery.install(entry)
-    print(color(f"✓ installed {entry['code']}", GREEN), f"({entry.get('name')} by {entry.get('author')}) -> {t.path}")
+    print(color(f"✓ installed {entry['code']}", GREEN),
+          f"({printable(entry.get('name'))} by {printable(entry.get('author'))}) -> {t.path}")
     if args.apply:
         print(color("✓ applied", GREEN) + backup_note(fastfetch.apply(t)))
     else:

@@ -26,7 +26,10 @@ def loads(text: str):
 
 
 def load(path) -> dict:
-    return loads(Path(path).read_text(encoding="utf-8"))
+    obj = loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(obj, dict):
+        raise ValueError(f"{path} is not a JSON object")
+    return obj
 
 
 HEADER = "// edited with fastcat-tui · https://github.com/ParsaBordbar/fastcat-tui\n"

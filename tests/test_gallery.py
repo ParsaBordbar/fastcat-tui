@@ -130,3 +130,17 @@ def test_share_builtin_logo_and_bad_code(mine):
 def test_cli_share_needs_a_name_for_the_live_config(site):
     with pytest.raises(SystemExit):
         cli.main(["share", "--no-browser"])
+
+
+def test_refuses_terminal_escapes(site):
+    site("loud", {"config.jsonc": CONFIG, "ascii.txt": "$1\x1b]52;c;aGk=\x07##\n"})
+    with pytest.raises(gallery.GalleryError, match="control characters"):
+        gallery.install(gallery.lookup("loud", gallery.fetch_index()))
+    assert gallery.installed("loud") is None
+
+
+@pytest.mark.parametrize("source", ["~/.ssh/id_rsa", "/etc/passwd", "../secret.txt"])
+def test_refuses_logo_outside_the_theme(site, source):
+    site("peek", {"config.jsonc": '{"logo": {"type": "file", "source": "%s"}, "modules": ["os"]}' % source})
+    with pytest.raises(gallery.GalleryError, match="outside the theme"):
+        gallery.install(gallery.lookup("peek", gallery.fetch_index()))

@@ -50,6 +50,7 @@ def _add_folder(st: dict, dirs: list[str]) -> None:
     screen([color("Add a theme folder", BOLD), color("folders like FastCat/ (with *-Themes inside) or one holding <Name>/fastfetch/", DIM), ""])
     d = ask("folder")
     if d and Path(d).is_dir():
+        d = str(Path(d).resolve())
         if d not in dirs:
             st["theme_dirs"] = dirs + [d]
             settings.save(st)

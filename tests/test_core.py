@@ -110,3 +110,8 @@ def test_recommended_config_is_plain_json():
     cfg = ffconfig.recommended(logo_palette={"1": "red"})
     json.dumps(cfg)
     assert cfg["logo"]["color"] == {"1": "red"} and cfg["display"]["key"]["width"] == 3
+
+
+def test_render_strips_control_characters():
+    lines = logo.render("a\x1b]0;pwned\x07b\n", {"1": "red"})
+    assert "\x07" not in lines[0] and "]0;pwned" in lines[0] and "\x1b]" not in lines[0]

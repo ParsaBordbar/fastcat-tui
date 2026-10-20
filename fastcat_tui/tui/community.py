@@ -1,6 +1,6 @@
 """Community gallery: install themes by code, or share your own."""
 from .. import gallery, logo
-from ..console import BOLD, CORAL, DIM, GREEN, RED, ask, color
+from ..console import BOLD, CORAL, DIM, GREEN, RED, ask, color, printable
 from ..menu import screen, select
 from .browser import theme_actions
 from .common import say
@@ -8,13 +8,17 @@ from .share import share_live
 
 
 def _entry_preview(e: dict) -> list[str]:
-    head = [color(f"{e.get('name', e['code'])}", BOLD) + color(f"  by {e.get('author', '?')}", DIM)]
+    head = [color(_name(e), BOLD) + color(f"  by {printable(e.get('author', '?'))}", DIM)]
     if e.get("description"):
-        head.append(color(str(e["description"]), DIM))
+        head.append(color(printable(e["description"]), DIM))
     head += [color(f"code: {e['code']}", CORAL) + (color("  · installed", GREEN) if gallery.installed(e["code"]) else ""), ""]
     text = e.get("logo")
     lcolors = {k: v for k, v in (e.get("colors") or {}).items() if isinstance(v, str)}
     return head + (logo.render(text, lcolors) if isinstance(text, str) else [color("(image or built-in logo)", DIM)])
+
+
+def _name(e: dict) -> str:
+    return printable(e.get("name", e["code"]))
 
 
 def _install(e: dict) -> None:
@@ -43,7 +47,7 @@ def gallery_menu() -> None:
     while True:
         opts = [("Enter a code", "copied from the gallery site"),
                 ("Share my config", "submit your current fastfetch to the gallery")]
-        opts += [(str(e.get("name", e["code"])), e["code"] + (" · installed" if gallery.installed(e["code"]) else ""))
+        opts += [(_name(e), e["code"] + (" · installed" if gallery.installed(e["code"]) else ""))
                  for e in index]
         k = select("Community gallery", opts, k, subtitle=status, preview=preview)
         if k is None:

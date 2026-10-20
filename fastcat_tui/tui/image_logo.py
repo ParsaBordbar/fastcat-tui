@@ -20,14 +20,17 @@ def image_to_logo() -> None:
             say(color("not found: " + path, RED))
         return
     width, mode, ncolors, trim, k = 40, "auto", 4, 0, 0
+    converted = None
     while True:
-        try:
-            text, palette, used = image.convert(path, width, mode, ncolors, trim)
-        except Exception as e:
-            say(color(f"could not convert: {e}", RED))
-            return
+        if converted is None or converted[0] != (width, mode, ncolors, trim):
+            try:
+                text, palette, used = image.convert(path, width, mode, ncolors, trim)
+            except Exception as e:
+                say(color(f"could not convert: {e}", RED))
+                return
+            converted = (width, mode, ncolors, trim), logo.render(text, palette)
+        art = converted[1]
         w, h = logo.size(text)
-        art = logo.render(text, palette)
         opts = [("Save as a theme", f"{w}×{h} cells"),
                 ("Width", f"{width} cells"),
                 ("Mode", mode if mode != "auto" else f"auto → {used}"),
