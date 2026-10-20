@@ -9,19 +9,21 @@ import os
 from pathlib import Path
 
 
-def _xdg(var: str, fallback: str) -> Path:
+def xdg(var: str, fallback: str) -> Path:
     return Path(os.environ.get(var) or os.path.expanduser(fallback))
 
 
-def data_dir() -> Path:
+def _app_dir(var: str, fallback: str) -> Path:
     home = os.environ.get("FASTCAT_TUI_HOME")
-    return Path(home).expanduser() if home else _xdg("XDG_DATA_HOME", "~/.local/share") / "fastcat-tui"
+    return Path(home).expanduser() if home else xdg(var, fallback) / "fastcat-tui"
+
+
+def data_dir() -> Path:
+    return _app_dir("XDG_DATA_HOME", "~/.local/share")
 
 
 def settings_path() -> Path:
-    home = os.environ.get("FASTCAT_TUI_HOME")
-    base = Path(home).expanduser() if home else _xdg("XDG_CONFIG_HOME", "~/.config") / "fastcat-tui"
-    return base / "settings.json"
+    return _app_dir("XDG_CONFIG_HOME", "~/.config") / "settings.json"
 
 
 def user_themes_dir() -> Path:

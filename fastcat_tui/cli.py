@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 from . import __version__, fastfetch, ffconfig, gallery, image, logo, settings, themes
-from .console import GREEN, RED, color, is_tty
+from .console import GREEN, RED, backup_note, color, is_tty
 
 USAGE = """\
 Browse, customise and create fastfetch themes.
@@ -68,9 +68,19 @@ def _theme(name: str) -> themes.Theme:
     return t
 
 
-def cmd_list() -> None:
+def cmd_list(args) -> None:
     for t in themes.all_themes():
         print(f"{t.category + '/' + t.name:32} {t.source}")
+
+
+def cmd_preview(args) -> None:
+    sys.exit(fastfetch.preview(_theme(args.theme)))
+
+
+def cmd_apply(args) -> None:
+    t = _theme(args.theme)
+    saved = fastfetch.apply(t)
+    print(color(f"✓ applied {t.category}/{t.name}", GREEN) + backup_note(saved))
 
 
 def cmd_logo(args) -> None:
@@ -83,11 +93,10 @@ def cmd_logo(args) -> None:
     w, h = logo.size(text)
     print(color(f"✓ saved {name}", GREEN), f"({w}x{h}, {used} mode) -> {theme.path}")
     if args.apply:
-        saved = fastfetch.apply(theme)
-        print(color("✓ applied", GREEN) + (f" · previous config backed up to {saved}" if saved else ""))
+        print(color("✓ applied", GREEN) + backup_note(fastfetch.apply(theme)))
 
 
-def cmd_gallery() -> None:
+def cmd_gallery(args) -> None:
     for e in sorted(gallery.fetch_index(), key=lambda e: e["code"]):
         mark = "  installed" if gallery.installed(e["code"]) else ""
         print(f"{e['code']:24} {str(e.get('name', ''))[:28]:28} by {str(e.get('author', ''))[:20]}{mark}")
@@ -100,8 +109,7 @@ def cmd_get(args) -> None:
     t = gallery.install(entry)
     print(color(f"✓ installed {entry['code']}", GREEN), f"({entry.get('name')} by {entry.get('author')}) -> {t.path}")
     if args.apply:
-        saved = fastfetch.apply(t)
-        print(color("✓ applied", GREEN) + (f" · previous config backed up to {saved}" if saved else ""))
+        print(color("✓ applied", GREEN) + backup_note(fastfetch.apply(t)))
     else:
         print(f"apply it with: fastcat-tui apply Gallery/{entry['code']}")
 
@@ -126,7 +134,7 @@ def cmd_share(args) -> None:
         print("  ·", line)
 
 
-def cmd_fix_icons() -> None:
+def cmd_fix_icons(args) -> None:
     cfg = fastfetch.load_live()
     if cfg is None:
         sys.exit(f"no readable config at {fastfetch.config_path()}")
@@ -136,7 +144,7 @@ def cmd_fix_icons() -> None:
         return
     saved = fastfetch.backup()
     fastfetch.save_live(cfg)
-    print(color(f"✓ {n} icon(s) updated", GREEN) + f" · previous config backed up to {saved}")
+    print(color(f"✓ {n} icon(s) updated", GREEN) + backup_note(saved))
 
 
 def cmd_restore(args) -> None:
@@ -153,40 +161,31 @@ def cmd_restore(args) -> None:
     print(color(f"✓ restored {pick.name}", GREEN))
 
 
+def cmd_paths(args) -> None:
+    for label, path in (("fastfetch config", fastfetch.config_dir()), ("your themes", settings.user_themes_dir()),
+                        ("backups", settings.backups_dir()), ("FastCat pack", settings.fastcat_clone_dir()),
+                        ("gallery themes", settings.gallery_dir()), ("settings", settings.settings_path())):
+        print(f"{label:17} {path}")
+
+
+COMMANDS = {"list": cmd_list, "preview": cmd_preview, "apply": cmd_apply, "logo": cmd_logo,
+            "gallery": cmd_gallery, "get": cmd_get, "share": cmd_share, "fix-icons": cmd_fix_icons,
+            "restore": cmd_restore, "paths": cmd_paths}
+
+
 def main(argv: list[str] | None = None) -> None:
     argv = sys.argv[1:] if argv is None else argv
     if not argv:
         from .tui import run
         run()
         return
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    command = COMMANDS.get(args.cmd)
+    if command is None:
+        parser.print_help()
+        return
     try:
-        if args.cmd == "list":
-            cmd_list()
-        elif args.cmd == "preview":
-            sys.exit(fastfetch.preview(_theme(args.theme)))
-        elif args.cmd == "apply":
-            t = _theme(args.theme)
-            saved = fastfetch.apply(t)
-            print(color(f"✓ applied {t.category}/{t.name}", GREEN) + (f" · previous config backed up to {saved}" if saved else ""))
-        elif args.cmd == "logo":
-            cmd_logo(args)
-        elif args.cmd == "gallery":
-            cmd_gallery()
-        elif args.cmd == "get":
-            cmd_get(args)
-        elif args.cmd == "share":
-            cmd_share(args)
-        elif args.cmd == "fix-icons":
-            cmd_fix_icons()
-        elif args.cmd == "restore":
-            cmd_restore(args)
-        elif args.cmd == "paths":
-            print(f"fastfetch config  {fastfetch.config_dir()}\nyour themes       {settings.user_themes_dir()}\n"
-                  f"backups           {settings.backups_dir()}\nFastCat pack      {settings.fastcat_clone_dir()}\n"
-                  f"gallery themes    {settings.gallery_dir()}\n"
-                  f"settings          {settings.settings_path()}")
-        else:
-            build_parser().print_help()
+        command(args)
     except (OSError, ValueError) as e:
         sys.exit(color(f"error: {e}", RED))

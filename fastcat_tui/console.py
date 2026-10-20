@@ -54,6 +54,10 @@ def term_size() -> tuple[int, int]:
     return size.columns, size.lines
 
 
+def backup_note(saved) -> str:
+    return f" · previous config backed up to {saved}" if saved else ""
+
+
 TAGLINE = "fastfetch themes, your way"
 
 

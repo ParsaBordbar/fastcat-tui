@@ -7,6 +7,7 @@ and show up in the browser under "Gallery". Set FASTCAT_GALLERY_URL to use a for
 Sharing goes the other way without git: share() opens the gallery's "Submit a theme" issue form
 pre-filled through its URL, and a bot there turns the issue into a pull request.
 """
+import copy
 import hashlib
 import json
 import os
@@ -19,7 +20,7 @@ import urllib.request
 import webbrowser
 from pathlib import Path
 
-from . import __version__, jsonc, settings, themes
+from . import __version__, ffconfig, jsonc, settings, themes
 
 DEFAULT_URL = "https://parsabordbar.github.io/fastcat-gallery/"
 SUBMIT_URL = "https://github.com/ParsaBordbar/fastcat-gallery/issues/new"
@@ -116,7 +117,6 @@ def install(entry: dict) -> themes.Theme:
     return themes.Theme(code, "Gallery", final / "fastfetch", "gallery")
 
 
-# ---------------------------------------------------------------- sharing
 def suggest_code(name: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")[:32].strip("-") or "my-theme"
 
@@ -124,15 +124,13 @@ def suggest_code(name: str) -> str:
 def share_files(cfg: dict, base: Path) -> tuple[str, str | None]:
     """(config.jsonc text, ascii.txt text or None) as the gallery wants them, logo pointed at ascii.txt."""
     check_config(cfg)
-    out = jsonc.loads(jsonc.dumps(cfg))
-    lg = out.get("logo")
-    if isinstance(lg, str):
-        lg = out["logo"] = {"source": lg}
-    f = themes.logo_file(cfg, base)
-    if f:
+    out = copy.deepcopy(cfg)
+    lg = ffconfig.logo_section(out)
+    text = themes.logo_text(cfg, base)
+    if lg is not None and text is not None:
         lg["source"] = "~/.config/fastfetch/ascii.txt"
-        return jsonc.dumps(out), f.read_text(encoding="utf-8", errors="replace")
-    if isinstance(lg, dict) and isinstance(lg.get("source"), str) and lg.get("type") not in ("builtin", "small", "data", "data-raw", "none"):
+        return jsonc.dumps(out), text
+    if lg and isinstance(lg.get("source"), str) and lg.get("type") not in themes.BUILTIN_LOGO_TYPES:
         src = themes.resolve_source(lg["source"], base)
         if not src.is_file() and "/" in lg["source"]:
             raise GalleryError(f"the logo file {src} does not exist")

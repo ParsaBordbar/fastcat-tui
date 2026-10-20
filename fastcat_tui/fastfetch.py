@@ -1,4 +1,5 @@
 """The live fastfetch config: run it, apply themes, back it up and restore it."""
+import copy
 import os
 import shutil
 import subprocess
@@ -6,11 +7,11 @@ import tempfile
 import time
 from pathlib import Path
 
-from . import jsonc, settings, themes
+from . import ffconfig, jsonc, settings, themes
 
 
 def config_dir() -> Path:
-    return Path(os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")) / "fastfetch"
+    return settings.xdg("XDG_CONFIG_HOME", "~/.config") / "fastfetch"
 
 
 def config_path() -> Path:
@@ -43,7 +44,9 @@ def backups() -> list[Path]:
     return sorted((p for p in d.iterdir() if p.is_dir()), reverse=True) if d.is_dir() else []
 
 
-def _replace_live(src: Path) -> None:
+def _install(src: Path) -> Path | None:
+    """Back up the live config, then replace it with a copy of src. Returns the backup path."""
+    saved = backup()
     dest = config_dir()
     if dest.is_symlink() or dest.is_file():
         dest.unlink()
@@ -51,20 +54,17 @@ def _replace_live(src: Path) -> None:
         shutil.rmtree(dest)
     dest.parent.mkdir(parents=True, exist_ok=True)
     shutil.copytree(src, dest, symlinks=True)
+    return saved
 
 
 def apply(theme: themes.Theme) -> Path | None:
-    """Back up the live config, then install the theme. Returns the backup path."""
-    saved = backup()
-    _replace_live(theme.path)
-    return saved
+    """Install a theme as the live config. Returns the backup of what was replaced."""
+    return _install(theme.path)
 
 
 def restore(path: Path) -> Path | None:
-    """Back up the live config, then put a backup back. Returns the backup of what was replaced."""
-    saved = backup()
-    _replace_live(path)
-    return saved
+    """Put a backup back as the live config. Returns the backup of what was replaced."""
+    return _install(path)
 
 
 def save_live(cfg: dict) -> None:
@@ -81,11 +81,9 @@ def load_live() -> dict | None:
 
 def standalone(cfg: dict, base: Path) -> dict:
     """Copy of cfg whose logo path works from anywhere (for previews)."""
-    out = jsonc.loads(jsonc.dumps(cfg))
-    lg = out.get("logo")
-    if isinstance(lg, str):
-        lg = out["logo"] = {"source": lg}
-    if isinstance(lg, dict) and isinstance(lg.get("source"), str) and lg.get("type") not in ("builtin", "small", "data", "data-raw"):
+    out = copy.deepcopy(cfg)
+    lg = ffconfig.logo_section(out)
+    if lg and isinstance(lg.get("source"), str) and lg.get("type") not in themes.BUILTIN_LOGO_TYPES:
         candidate = themes.resolve_source(lg["source"], base)
         if candidate.exists():
             lg["source"] = str(candidate)

@@ -13,6 +13,7 @@ CATALOG = ["title", "os", "host", "kernel", "uptime", "packages", "shell", "disp
            "media", "colors", "break"]
 
 
+
 def modules(cfg: dict) -> list:
     mods = cfg.get("modules")
     if not isinstance(mods, list):
@@ -59,7 +60,6 @@ def fix_icons(cfg: dict) -> int:
     return changed
 
 
-# ---------------------------------------------------------------- colours
 def logo_section(cfg: dict) -> dict | None:
     lg = cfg.get("logo")
     if lg is None or lg == "none":
@@ -81,8 +81,10 @@ def set_logo_color(cfg: dict, slot: str, spec: str) -> None:
 
 
 def key_colors(cfg: dict) -> list[str]:
-    fallback = display(cfg).get("color", {}).get("keys", "default") if isinstance(display(cfg).get("color"), dict) else "default"
-    return [modules(cfg)[i].get("keyColor", fallback) if isinstance(modules(cfg)[i], dict) else fallback
+    c = display(cfg).get("color")
+    fallback = c.get("keys", "default") if isinstance(c, dict) else "default"
+    mods = modules(cfg)
+    return [mods[i].get("keyColor", fallback) if isinstance(mods[i], dict) else fallback
             for i in info_indices(cfg)]
 
 
@@ -119,7 +121,6 @@ def set_text_color(cfg: dict, spec: str) -> None:
     c["output"] = spec
 
 
-# ---------------------------------------------------------------- layout
 def key_width(cfg: dict) -> int:
     k = display(cfg).get("key")
     return int(k.get("width", 0)) if isinstance(k, dict) else 0
@@ -163,10 +164,11 @@ def center(cfg: dict, logo_height: int) -> str:
     return "already centred"
 
 
-# ---------------------------------------------------------------- new configs
-def new_module(module_type: str, key_color: str | None = None) -> dict | str:
-    if module_type in ("break", "separator", "colors", "title"):
-        return {"type": module_type} if module_type != "colors" else {"type": "colors", "symbol": "circle"}
+def new_module(module_type: str, key_color: str | None = None) -> dict:
+    if module_type == "colors":
+        return {"type": "colors", "symbol": "circle"}
+    if module_type in ("break", "separator", "title"):
+        return {"type": module_type}
     m = {"type": module_type}
     icon = icons.recommended(module_type)
     if icon:
@@ -178,11 +180,10 @@ def new_module(module_type: str, key_color: str | None = None) -> dict | str:
 
 def recommended(logo_source: str = "~/.config/fastfetch/ascii.txt", logo_palette: dict | None = None) -> dict:
     """A clean config: file logo, one-cell icons, aligned keys."""
-    cfg = {
+    return {
         "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
         "logo": {"source": logo_source, "color": copy.deepcopy(logo_palette or {"1": "default"}),
                  "padding": {"right": 4}},
         "display": {"separator": " ", "key": {"width": 3}},
         "modules": [new_module(t) for t in RECOMMENDED_MODULES],
     }
-    return cfg

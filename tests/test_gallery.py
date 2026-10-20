@@ -81,7 +81,6 @@ def test_reinstall_replaces_old_copy(site):
     assert not (gallery.installed("neon-cat") / "old.txt").exists()
 
 
-# ---------------------------------------------------------------- sharing
 def _form(url: str) -> dict:
     return {k: v[0] for k, v in parse_qs(urlparse(url).query).items()}
 

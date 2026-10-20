@@ -15,6 +15,10 @@ from . import colors, ffconfig, jsonc, logo, settings
 
 BUNDLED_DIR = Path(__file__).parent / "themes"
 _CONFIG_DIR_PREFIX = re.compile(r"^(~|\$HOME|\$\{HOME\})/\.config/fastfetch/")
+_IMAGE_SUFFIXES = (".png", ".jpg", ".jpeg", ".gif", ".webp")
+# logo types whose "source" is a name or inline text, not a file path
+BUILTIN_LOGO_TYPES = ("builtin", "small", "data", "data-raw", "none")
+_CATEGORY = {"mine": "Mine", "gallery": "Gallery"}
 
 
 @dataclass
@@ -22,7 +26,7 @@ class Theme:
     name: str
     category: str
     path: Path          # the fastfetch/ folder
-    source: str         # mine | bundled | fastcat
+    source: str         # mine | gallery | bundled | fastcat
 
     @property
     def config_path(self) -> Path:
@@ -31,12 +35,8 @@ class Theme:
     def config(self) -> dict:
         return jsonc.load(self.config_path)
 
-    def logo_file(self) -> Path | None:
-        return logo_file(self.config(), self.path)
-
     def logo_text(self) -> str | None:
-        f = self.logo_file()
-        return f.read_text(encoding="utf-8", errors="replace") if f else None
+        return logo_text(self.config(), self.path)
 
 
 def safe_name(raw: str) -> str:
@@ -84,23 +84,28 @@ def logo_file(cfg: dict, base: Path) -> Path | None:
     if lg.get("type") not in (None, "auto", "file", "file-raw"):
         return None
     f = resolve_source(lg["source"], base)
-    return f if f.is_file() and f.suffix.lower() not in (".png", ".jpg", ".jpeg", ".gif", ".webp") else None
+    return f if f.is_file() and f.suffix.lower() not in _IMAGE_SUFFIXES else None
+
+
+def logo_text(cfg: dict, base: Path) -> str | None:
+    f = logo_file(cfg, base)
+    return f.read_text(encoding="utf-8", errors="replace") if f else None
 
 
 def logo_height(cfg: dict, base: Path) -> int:
-    f = logo_file(cfg, base)
-    if f:
-        return logo.size(f.read_text(encoding="utf-8", errors="replace"))[1]
+    text = logo_text(cfg, base)
+    if text is not None:
+        return logo.size(text)[1]
     lg = cfg.get("logo")
     return int(lg.get("height", 0)) if isinstance(lg, dict) and str(lg.get("height", "")).isdigit() else 0
 
 
-def _scan(base: Path, source: str) -> list[Theme]:
+def scan(base: Path, source: str) -> list[Theme]:
     found = []
     if not base.is_dir():
         return found
     for cfg in sorted(base.glob("*/fastfetch/config.jsonc")):
-        found.append(Theme(cfg.parent.parent.name, {"mine": "Mine", "gallery": "Gallery"}.get(source, base.name), cfg.parent, source))
+        found.append(Theme(cfg.parent.parent.name, _CATEGORY.get(source, base.name), cfg.parent, source))
     for cfg in sorted(base.glob("*/*/fastfetch/config.jsonc")):
         category = cfg.parent.parent.parent.name.removesuffix("-Themes")
         found.append(Theme(cfg.parent.parent.name, category, cfg.parent, source))
@@ -112,16 +117,17 @@ def fastcat_dirs(cfg: dict | None = None) -> list[Path]:
     dirs = [settings.fastcat_clone_dir()] + [Path(d).expanduser() for d in cfg.get("theme_dirs", [])]
     seen, out = set(), []
     for d in dirs:
-        if d.resolve() not in seen:
-            seen.add(d.resolve())
+        key = d.resolve()
+        if key not in seen:
+            seen.add(key)
             out.append(d)
     return out
 
 
 def all_themes(cfg: dict | None = None) -> list[Theme]:
-    themes = _scan(settings.user_themes_dir(), "mine") + _scan(settings.gallery_dir(), "gallery") + _scan(BUNDLED_DIR, "bundled")
+    themes = scan(settings.user_themes_dir(), "mine") + scan(settings.gallery_dir(), "gallery") + scan(BUNDLED_DIR, "bundled")
     for d in fastcat_dirs(cfg):
-        themes += _scan(d, "fastcat")
+        themes += scan(d, "fastcat")
     return themes
 
 
