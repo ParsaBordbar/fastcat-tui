@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "fastcat-tui"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Browse, customise and create fastfetch themes from a terminal UI"
 readme = "README.md"
 license = "Apache-2.0"
@@ -29,8 +29,14 @@ Homepage = "https://github.com/ParsaBordbar/fastcat-tui"
 [project.scripts]
 fastcat-tui = "fastcat_tui.cli:main"
 
+[dependency-groups]
+dev = ["pytest>=8"]
+
 [tool.setuptools.packages.find]
 include = ["fastcat_tui*"]
+
+[tool.setuptools.dynamic]
+version = { attr = "fastcat_tui.__version__" }
 
 [tool.setuptools.package-data]
 fastcat_tui = ["themes/**/*"]

@@ -1,0 +1,32 @@
+# Maintainer: Parsa Bordbar <parsab71@gmail.com>
+pkgname=fastcat-tui
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Browse, customise and create fastfetch themes from a terminal UI"
+arch=('any')
+url="https://github.com/ParsaBordbar/fastcat-tui"
+license=('Apache-2.0' 'MIT')
+depends=('python' 'fastfetch')
+makedepends=('python-build' 'python-installer' 'python-setuptools' 'python-wheel')
+checkdepends=('python-pytest')
+optdepends=('python-pillow: turn images into logos'
+            'git: download the FastCat theme pack'
+            'ttf-nerd-fonts-symbols: icons')
+source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('0000000000000000000000000000000000000000000000000000000000000000')
+
+build() {
+  cd "$pkgname-$pkgver"
+  python -m build --wheel --no-isolation
+}
+
+check() {
+  cd "$pkgname-$pkgver"
+  python -m pytest -q
+}
+
+package() {
+  cd "$pkgname-$pkgver"
+  python -m installer --destdir="$pkgdir" dist/*.whl
+  install -Dm644 NOTICE fastcat_tui/themes/LICENSE-FastCat -t "$pkgdir/usr/share/licenses/$pkgname/"
+}
