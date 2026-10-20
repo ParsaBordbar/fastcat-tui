@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fastcat-tui"
+version = "0.1.0"
+description = "Browse, customise and create fastfetch themes from a terminal UI"
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+authors = [{ name = "Parsa Bordbar" }]
+requires-python = ">=3.10"
+dependencies = []
+keywords = ["fastfetch", "neofetch", "theme", "tui", "ascii-art", "nerd-fonts"]
+classifiers = [
+    "Environment :: Console",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+]
+
+[project.optional-dependencies]
+image = ["pillow>=9.1"]
+
+[project.urls]
+Homepage = "https://github.com/ParsaBordbar/fastcat-tui"
+
+[project.scripts]
+fastcat-tui = "fastcat_tui.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["fastcat_tui*"]
+
+[tool.setuptools.package-data]
+fastcat_tui = ["themes/**/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,0 +1,114 @@
+// edited with fastcat-tui · https://github.com/ParsaBordbar/fastcat-tui
+{
+    "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
+    "logo": {
+        "source": "~/.config/fastfetch/ascii.txt",
+        "color": {
+            "1": "white",
+            "2": "yellow",
+            "3": "red",
+            "4": "cyan",
+            "5": "90"
+        }
+    },
+    "display": {
+        "separator": " ",
+        "key": {
+            "width": 3
+        }
+    },
+    "modules": [
+        {
+            "type": "break"
+        },
+        {
+            "type": "break"
+        },
+        {
+            "type": "break"
+        },
+        {
+            "type": "break"
+        },
+        {
+            "type": "break"
+        },
+        {
+            "type": "os",
+            "key": " ",
+            "keyColor": "cyan"
+        },
+        {
+            "type": "kernel",
+            "key": " ",
+            "keyColor": "cyan"
+        },
+        {
+            "type": "packages",
+            "key": " ",
+            "keyColor": "cyan"
+        },
+        {
+            "type": "shell",
+            "key": " ",
+            "keyColor": "cyan"
+        },
+        {
+            "type": "terminal",
+            "key": " ",
+            "keyColor": "yellow"
+        },
+        {
+            "type": "de",
+            "key": " ",
+            "keyColor": "yellow"
+        },
+        {
+            "type": "gpu",
+            "key": " ",
+            "format": "{3}",
+            "keyColor": "yellow"
+        },
+        {
+            "type": "wm",
+            "key": " ",
+            "keyColor": "yellow"
+        },
+        {
+            "type": "wmtheme",
+            "key": " ",
+            "keyColor": "white"
+        },
+        {
+            "type": "cursor",
+            "key": " ",
+            "keyColor": "white"
+        },
+        {
+            "type": "terminalfont",
+            "key": " ",
+            "keyColor": "white"
+        },
+        {
+            "type": "uptime",
+            "key": " ",
+            "keyColor": "white"
+        },
+        {
+            "type": "datetime",
+            "format": "{1}-{3}-{11}",
+            "key": " ",
+            "keyColor": "red"
+        },
+        {
+            "type": "memory",
+            "key": " ",
+            "keyColor": "red"
+        },
+        {
+            "type": "monitor",
+            "key": " ",
+            "keyColor": "red"
+        }
+    ]
+}

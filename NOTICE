@@ -1,0 +1,15 @@
+fastcat-tui
+Copyright 2026 Parsa Bordbar
+https://github.com/ParsaBordbar/fastcat-tui
+
+This product includes software originally developed by Parsa Bordbar.
+Redistributions of this software, in source or binary form, with or without
+modification, must retain this NOTICE file (Apache License 2.0, Section 4(d)).
+
+The theme configs in fastcat_tui/themes/ build on FastCat
+(https://github.com/m3tozz/FastCat), Copyright (c) 2025 Metin Zühre,
+used under the MIT License (see fastcat_tui/themes/LICENSE-FastCat).
+The FastCat theme pack itself is not redistributed: fastcat-tui downloads it
+from its own repository when you ask it to.
+
+Characters shown in the bundled logos belong to their respective owners.
