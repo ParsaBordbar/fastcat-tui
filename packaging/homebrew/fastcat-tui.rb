@@ -9,6 +9,7 @@ class FastcatTui < Formula
   sha256 "0000000000000000000000000000000000000000000000000000000000000000"
   license all_of: ["Apache-2.0", "MIT"]
 
+  depends_on "python-setuptools" => :build
   depends_on "fastfetch"
   depends_on "python@3.13"
 

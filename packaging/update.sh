@@ -7,10 +7,15 @@ version=${1:?usage: packaging/update.sh VERSION}
 here=$(cd "$(dirname "$0")" && pwd)
 url="https://github.com/ParsaBordbar/fastcat-tui/archive/refs/tags/v$version.tar.gz"
 
+# Download first: in a pipe a failed curl (tag not pushed yet) would go unnoticed and the hash of
+# nothing would end up in the formula.
+tarball=$(mktemp)
+trap 'rm -f "$tarball"' EXIT
+curl -fsSL -o "$tarball" "$url"
 if command -v sha256sum >/dev/null; then
-  sha=$(curl -fsSL "$url" | sha256sum | cut -d' ' -f1)
+  sha=$(sha256sum "$tarball" | cut -d' ' -f1)
 else
-  sha=$(curl -fsSL "$url" | shasum -a 256 | cut -d' ' -f1)
+  sha=$(shasum -a 256 "$tarball" | cut -d' ' -f1)
 fi
 
 formula="$here/homebrew/fastcat-tui.rb"

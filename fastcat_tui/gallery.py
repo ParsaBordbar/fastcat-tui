@@ -32,6 +32,10 @@ ALLOWED_EXT = {".jsonc", ".json", ".txt", ".png"}
 SKIP_FILES = {"theme.json"}         # gallery metadata, not part of the fastfetch config
 MAX_FILE = 256 * 1024
 BLOCKED_MODULES = {"command"}       # runs programs; the gallery rejects these, and so do we
+# Every logo type but command-raw, which runs its source as a shell command.
+SAFE_LOGO_TYPES = {"auto", "builtin", "small", "file", "file-raw", "data", "data-raw", "sixel", "kitty",
+                   "kitty-direct", "kitty-icat", "iterm", "chafa", "raw", "none"}
+SGR_RE = re.compile(r"\x1b\[[0-9;]*m")  # colour codes are fine in config strings, other escapes are not
 
 
 class GalleryError(OSError):
@@ -94,17 +98,48 @@ def installed(code: str) -> Path | None:
     return p if (p / "config.jsonc").is_file() else None
 
 
+def _key(d, name: str):
+    """d[name] ignoring case, the way fastfetch reads config keys."""
+    if not isinstance(d, dict):
+        return None
+    return next((v for k, v in d.items() if isinstance(k, str) and k.lower() == name), None)
+
+
+def _strings(x):
+    if isinstance(x, str):
+        yield x
+    elif isinstance(x, dict):
+        for k, v in x.items():
+            yield str(k)
+            yield from _strings(v)
+    elif isinstance(x, list):
+        for v in x:
+            yield from _strings(v)
+
+
 def check_config(cfg) -> None:
+    """Refuse configs that make fastfetch run programs or print escape sequences other than colours.
+    The gallery's scripts/build.py applies the same rules."""
     if not isinstance(cfg, dict):
         raise GalleryError("config.jsonc is not a JSON object")
-    for m in cfg.get("modules", []):
-        t = m.get("type") if isinstance(m, dict) else m
+    modules = _key(cfg, "modules") or []
+    if not isinstance(modules, list):
+        raise GalleryError("'modules' in config.jsonc is not a list")
+    for m in modules:
+        t = _key(m, "type") if isinstance(m, dict) else m
         if isinstance(t, str) and t.lower() in BLOCKED_MODULES:
-            raise GalleryError(f"refusing to install: the theme uses the '{t}' module, which runs programs")
+            raise GalleryError(f"the theme uses the '{t}' module, which runs programs")
+    if _key(_key(cfg, "general"), "prerun") is not None:
+        raise GalleryError("the theme sets general.preRun, which runs programs")
+    t = _key(_key(cfg, "logo"), "type")
+    if t is not None and (not isinstance(t, str) or t.lower() not in SAFE_LOGO_TYPES):
+        raise GalleryError(f"the logo type {t!r} is not allowed (command-raw runs programs)")
+    if any(CONTROL_RE.search(SGR_RE.sub("", s)) for s in _strings(cfg)):
+        raise GalleryError("config.jsonc contains terminal control sequences other than colour codes")
 
 
 def _check_downloaded(name: str, data: bytes) -> None:
-    if name.endswith(".png"):
+    if Path(name).suffix.lower() == ".png":
         return
     try:
         text = data.decode("utf-8")

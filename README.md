@@ -64,8 +64,9 @@ gallery fork or a local copy.
 
 Gallery themes are checked before they are saved: every file must match the SHA-256 in the gallery index,
 only `.jsonc`, `.json`, `.txt` and `.png` files are accepted, text files may not contain terminal control
-characters, the logo must be one of the theme's own files, and themes using the `command` module (which runs
-programs) are refused.
+characters, strings in the config may hold colour codes but no other escape sequences, and the logo must be
+one of the theme's own files. Anything that makes fastfetch run a program is refused: the `command` module,
+`general.preRun` and `command-raw` logos.
 
 ## Development
 

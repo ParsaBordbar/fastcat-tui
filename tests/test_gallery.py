@@ -165,3 +165,29 @@ def test_cli_gallery_filters(site, capsys):
     assert "neon-cat" in out and "venom" not in out
     with pytest.raises(SystemExit, match="nothing in the gallery"):
         cli.main(["gallery", "nope"])
+
+
+@pytest.mark.parametrize("config", [
+    '{"general": {"preRun": "touch /tmp/x"}, "modules": ["os"]}',
+    '{"General": {"PRERUN": "touch /tmp/x"}}',
+    '{"logo": {"type": "command-raw", "source": "touch x"}}',
+    '{"Logo": {"Type": "Command-Raw", "source": "touch x"}}',
+    '{"modules": [{"type": "os", "key": "\\u001b]52;c;aGk=\\u0007"}]}',
+    '{"logo": {"type": "data-raw", "source": "\\u001b[2J"}}',
+    '{"modules": {"type": "command"}}',
+])
+def test_refuses_configs_that_run_programs_or_print_escapes(site, config):
+    site("bad", {"config.jsonc": config})
+    with pytest.raises(gallery.GalleryError):
+        gallery.install(gallery.lookup("bad", gallery.fetch_index()))
+    assert gallery.installed("bad") is None
+
+
+def test_colour_codes_and_image_logos_are_fine(site, tmp_path):
+    config = ('{"logo": {"type": "iterm", "source": "cat.PNG"}, '
+              '"modules": [{"type": "custom", "format": "\\u001b[90m┌──\\u001b[0m"}]}')
+    site("ok", {"config.jsonc": config})
+    (tmp_path / "site" / "themes" / "ok" / "cat.PNG").write_bytes(b"\x89PNG\xff")
+    entry = gallery.lookup("ok", gallery.fetch_index())
+    entry["files"]["cat.PNG"] = hashlib.sha256(b"\x89PNG\xff").hexdigest()
+    assert (gallery.install(entry).path / "cat.PNG").is_file()
