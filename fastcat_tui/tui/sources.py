@@ -29,7 +29,7 @@ def backups_menu() -> None:
     k = select("Restore a backup", [(b.name, "") for b in bs], preview=preview)
     if k is None:
         return
-    if select(f"Restore {bs[k].name}?", [("Restore", "your current config is backed up first"), ("Cancel", "")]) == 0:
+    if select(f"Restore {bs[k].name}?", [("Restore", "your current config is backed up first"), ("Cancel", "")], back=False) == 0:
         fastfetch.restore(bs[k])
         run_screen(fastfetch.run, f"✓ restored {bs[k].name}")
 
@@ -79,7 +79,7 @@ def sources_menu() -> None:
             _add_folder(st, dirs)
         else:
             d = dirs[k - 2]
-            if select(f"Remove {d}?", [("Remove", "the folder itself is not touched"), ("Cancel", "")]) == 0:
+            if select(f"Remove {d}?", [("Remove", "the folder itself is not touched"), ("Cancel", "")], back=False) == 0:
                 st["theme_dirs"] = [x for x in dirs if x != d]
                 settings.save(st)
                 k = 0

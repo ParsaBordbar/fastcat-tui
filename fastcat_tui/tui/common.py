@@ -32,7 +32,7 @@ def run_screen(fn, title: str | None = None) -> None:
 
 def overwrite_ok(name: str) -> bool:
     """True when no theme called name exists under Mine, or the user agrees to overwrite it."""
-    return not themes.mine_dir(name).exists() or select(f"'{name}' exists", [("Overwrite it", ""), ("Cancel", "")]) == 0
+    return not themes.mine_dir(name).exists() or select(f"'{name}' exists", [("Overwrite it", ""), ("Cancel", "")], back=False) == 0
 
 
 def home_relative(path) -> str:

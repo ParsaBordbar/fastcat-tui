@@ -31,7 +31,7 @@ Drop `[image]` if you don't need image → logo. From a checkout, `python3 run.p
 ## Use
 
 Run `fastcat-tui` with no arguments for the interactive app. Arrow keys or `j`/`k` move, enter selects,
-esc goes back, `q` quits.
+esc (or the **← Back** entry at the bottom of each menu) goes back, `q` quits.
 
 Every action is also a command:
 
@@ -40,6 +40,7 @@ fastcat-tui list                              # every theme it can see
 fastcat-tui preview Venom                     # run fastfetch with a theme, change nothing
 fastcat-tui apply Originals/Venom             # install a theme (backs up your config first)
 fastcat-tui gallery                           # list community themes
+fastcat-tui gallery cat neon                  # only those matching every word, like the site's search
 fastcat-tui get neon-cat --apply              # install one by its code (and apply it)
 fastcat-tui share --name "Neon Cat"           # submit your config to the gallery
 fastcat-tui logo ~/Pictures/cat.png --width 36 --name Kitty --apply

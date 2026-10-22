@@ -15,6 +15,7 @@ Examples:
     fastcat-tui preview Venom                     # run fastfetch with a theme, change nothing
     fastcat-tui apply Large/Cat                   # install a theme (backs up your config first)
     fastcat-tui gallery                           # list community themes
+    fastcat-tui gallery cat neon                  # ... matching every word, like the site's search
     fastcat-tui get neon-cat --apply              # install one by its code (and apply it)
     fastcat-tui share --name "Neon Cat"           # submit your config to the gallery (no git needed)
     fastcat-tui logo ~/Pictures/cat.png --width 36 --name Kitty --apply
@@ -43,7 +44,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--name", help="theme name (default: image file name)")
     p.add_argument("--apply", action="store_true", help="apply the new theme right away")
     p.add_argument("--force", action="store_true", help="overwrite a theme of yours with the same name")
-    sub.add_parser("gallery", help="list themes in the community gallery")
+    p = sub.add_parser("gallery", help="list themes in the community gallery")
+    p.add_argument("query", nargs="*", help="only themes matching every word (name, author, description, tags, code)")
     p = sub.add_parser("get", help="install a gallery theme by its code")
     p.add_argument("code", help="the code shown on the gallery site")
     p.add_argument("--apply", action="store_true", help="apply it right away")
@@ -100,7 +102,10 @@ def cmd_logo(args) -> None:
 
 
 def cmd_gallery(args) -> None:
-    for e in sorted(gallery.fetch_index(), key=lambda e: e["code"]):
+    found = gallery.search(gallery.fetch_index(), " ".join(args.query))
+    if args.query and not found:
+        sys.exit(f"nothing in the gallery matches {' '.join(args.query)!r}")
+    for e in sorted(found, key=lambda e: e["code"]):
         mark = "  installed" if gallery.installed(e["code"]) else ""
         print(f"{e['code']:24} {printable(e.get('name', ''))[:28]:28} by {printable(e.get('author', ''))[:20]}{mark}")
 

@@ -186,7 +186,7 @@ def customize() -> None:
     dirty = cfg is None
     if cfg is None:
         if select(f"No fastfetch config at {fastfetch.config_path()}",
-                  [("Start from a clean config", "recommended lines and icons, built-in logo"), ("Back", "")]) != 0:
+                  [("Start from a clean config", "recommended lines and icons, built-in logo"), ("Back", "")], back=False) != 0:
             return
         cfg = ffconfig.recommended()
         cfg["logo"] = {"padding": {"right": 4}}
@@ -209,7 +209,7 @@ def customize() -> None:
             if not dirty:
                 return
             a = select("Unsaved changes", [("Save", "write them to your config"), ("Discard", "leave without saving"),
-                                           ("Keep editing", "")])
+                                           ("Keep editing", "")], back=False)
             if a == 0:
                 k, leaving = 7, True
             elif a == 1:

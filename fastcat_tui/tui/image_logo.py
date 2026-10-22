@@ -66,7 +66,7 @@ def _save_logo_theme(src: Path, text: str, palette: dict) -> None:
     t, cfg = themes.save_logo_theme(name, text, palette)
     k = select(f"✓ saved {name}", [("Apply it now", "current config is backed up"), ("Preview", "nothing changes"),
                                    ("Done", home_relative(t.path))],
-               preview=lambda _: mock(cfg, t.path))
+               preview=lambda _: mock(cfg, t.path), back=False)
     if k == 0:
         saved = fastfetch.apply(t)
         run_screen(fastfetch.run, f"✓ applied {name}" + backup_note(saved))

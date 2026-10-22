@@ -22,7 +22,7 @@ def main_menu() -> None:
                    ("Community gallery", "themes people shared · install by code", gallery_menu),
                    ("Theme sources", "get the FastCat pack · add folders", sources_menu),
                    ("Quit", "", None)]
-        k = select("What do you want to do?", [(label, desc) for label, desc, _ in entries], k)
+        k = select("What do you want to do?", [(label, desc) for label, desc, _ in entries], k, back=False)
         if k is None or entries[k][2] is None:
             return
         try:

@@ -69,6 +69,26 @@ def lookup(code: str, index: list[dict]) -> dict | None:
     return next((e for e in index if e["code"] == code), None)
 
 
+def tags(entry: dict) -> list[str]:
+    t = entry.get("tags")
+    return [x for x in t if isinstance(x, str)] if isinstance(t, list) else []
+
+
+def search(index: list[dict], query: str) -> list[dict]:
+    """Entries where every word of query is in the code, name, author, description or tags: the site's search."""
+    words = query.lower().split()
+
+    def hay(e: dict) -> str:
+        return " ".join(str(x) for x in (e["code"], e.get("name", ""), e.get("author", ""), e.get("description", ""),
+                                         *tags(e))).lower()
+    return [e for e in index if all(w in hay(e) for w in words)]
+
+
+def page_url(query: str = "") -> str:
+    """The gallery site, opened on a search when query is given."""
+    return base_url() + ("?" + urllib.parse.urlencode({"q": query}) if query else "")
+
+
 def installed(code: str) -> Path | None:
     p = settings.gallery_dir() / code / "fastfetch"
     return p if (p / "config.jsonc").is_file() else None

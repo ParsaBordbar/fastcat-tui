@@ -144,3 +144,24 @@ def test_refuses_logo_outside_the_theme(site, source):
     site("peek", {"config.jsonc": '{"logo": {"type": "file", "source": "%s"}, "modules": ["os"]}' % source})
     with pytest.raises(gallery.GalleryError, match="outside the theme"):
         gallery.install(gallery.lookup("peek", gallery.fetch_index()))
+
+
+def test_search_matches_every_word_like_the_site(monkeypatch):
+    index = [{"code": "neon-cat", "name": "Neon Cat", "author": "ann", "tags": ["cat", "neon"]},
+             {"code": "venom", "name": "Venom", "author": "ParsaBordbar", "description": "symbiote", "tags": None}]
+    assert [e["code"] for e in gallery.search(index, "")] == ["neon-cat", "venom"]
+    assert [e["code"] for e in gallery.search(index, "CAT ann")] == ["neon-cat"]
+    assert [e["code"] for e in gallery.search(index, "symbiote parsa")] == ["venom"]
+    assert gallery.search(index, "cat venom") == []
+    monkeypatch.setenv("FASTCAT_GALLERY_URL", "https://example.org/g")
+    assert gallery.page_url("neon cat") == "https://example.org/g/?q=neon+cat"
+
+
+def test_cli_gallery_filters(site, capsys):
+    site("neon-cat", {"config.jsonc": CONFIG})
+    site("venom", {"config.jsonc": CONFIG})
+    cli.main(["gallery", "neon"])
+    out = capsys.readouterr().out
+    assert "neon-cat" in out and "venom" not in out
+    with pytest.raises(SystemExit, match="nothing in the gallery"):
+        cli.main(["gallery", "nope"])

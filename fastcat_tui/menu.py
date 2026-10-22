@@ -3,6 +3,8 @@
 select()     pick one entry; an optional preview pane follows the cursor
 checklist()  toggle and reorder entries (used for the module list)
 Keys: up/down or j/k move, enter selects, esc / left / backspace go back, q quits.
+select() ends with a "← Back" entry for people who don't know about esc (back=False drops it, for
+menus that already end in Quit / Cancel / Done).
 """
 import os
 import select as _select
@@ -13,6 +15,7 @@ from contextlib import contextmanager
 
 from .console import BOLD, CORAL, DIM, HIDE_CURSOR, RESET, SHOW_CURSOR, banner_lines, clip, color, pad, term_size, visible_len
 
+BACK = "← Back"
 ALT_ON, ALT_OFF, HOME_CLEAR = "\033[?1049h", "\033[?1049l", "\033[H\033[2J"
 _SEQS = {b"[A": "up", b"[B": "down", b"[C": "right", b"[D": "left", b"OA": "up", b"OB": "down",
          b"OC": "right", b"OD": "left", b"[H": "home", b"[F": "end", b"[5~": "pgup", b"[6~": "pgdn"}
@@ -119,14 +122,20 @@ def _window(n: int, idx: int, room: int) -> tuple[int, int]:
 
 
 def select(title: str, options: list[tuple[str, str]], default: int = 0, preview=None,
-           subtitle: str | None = None, hint: str = "↑/↓ move · enter select · esc back · q quit") -> int | None:
-    """Arrow-key menu. options: (label, description). Returns the index, or None when going back.
+           subtitle: str | None = None, hint: str = "↑/↓ move · enter select · esc back · q quit",
+           back: bool = True) -> int | None:
+    """Arrow-key menu. options: (label, description). Returns the index, or None when going back
+    (esc, or the "← Back" entry added last when back is true).
 
     preview(idx) -> list of lines, drawn beside the menu (or under it on narrow terminals).
+    The Back entry keeps showing the preview of the entry above it.
     """
     if not options:
         return None
-    idx = max(0, min(default, len(options) - 1))
+    n = len(options)
+    if back:
+        options = options + [(BACK, "")]
+    idx = max(0, min(default, n - 1))
     label_w = min(42, max(visible_len(o[0]) for o in options))
     with raw_mode() as fd:
         while True:
@@ -144,7 +153,7 @@ def select(title: str, options: list[tuple[str, str]], default: int = 0, preview
                     row = "  " + text
                 body.append(" " + row + (color(f"  {desc}", DIM) if desc else ""))
             more = f" · {idx + 1}/{len(options)}" if shown < len(options) else ""
-            _draw(body, hint + more, preview(idx) if preview else None, subtitle)
+            _draw(body, hint + more, preview(min(idx, n - 1)) if preview else None, subtitle)
             key = read_key(fd)
             if key in ("up", "k"):
                 idx = (idx - 1) % len(options)
@@ -155,7 +164,7 @@ def select(title: str, options: list[tuple[str, str]], default: int = 0, preview
             elif key in ("pgdn", "end"):
                 idx = len(options) - 1 if key == "end" else min(len(options) - 1, idx + shown)
             elif key in ("enter", "right", "l"):
-                return idx
+                return idx if idx < n else None
             elif key in ("esc", "left", "back", "h"):
                 return None
             elif key in ("q", "quit"):
