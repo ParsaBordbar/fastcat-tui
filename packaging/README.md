@@ -13,7 +13,8 @@ the AUR. Pushing a version tag does all of it.
    with `brew install parsabordbar/tap/fastcat-tui`. Make a fine-grained token at *GitHub → Settings →
    Developer settings → Fine-grained tokens*, repository access *only homebrew-tap*, permission
    *Contents: read and write*, and save it in this repo as the Actions secret `HOMEBREW_TAP_TOKEN`.
-3. **AUR**: make an account on aur.archlinux.org. Create a key just for releases,
+3. **AUR** (not done yet: AUR registration was paused in October 2026; the job skips until the secret
+   exists, so releases go out without it): make an account on aur.archlinux.org. Create a key just for releases,
    `ssh-keygen -t ed25519 -N "" -C "fastcat-tui release" -f aur_release`, add `aur_release.pub` to your
    AUR account (*My Account → SSH Public Key*, one key per line next to your own), and save the private
    key `aur_release` in this repo as the Actions secret `AUR_SSH_KEY`. The first release creates the

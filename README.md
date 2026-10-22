@@ -19,12 +19,11 @@ in your terminal; image → logo needs Pillow.
 # Homebrew (macOS, Linux)
 brew install parsabordbar/tap/fastcat-tui
 
-# Arch Linux (AUR)
-yay -S fastcat-tui
-
-# Anywhere with Python
+# Anywhere with Python, Arch included
 pipx install 'fastcat-tui[image]'      # or: uv tool install 'fastcat-tui[image]'
 ```
+
+An AUR package is on the way (AUR sign-ups are paused for now).
 
 Drop `[image]` if you don't need image → logo. From a checkout, `python3 run.py` runs it without installing.
 
