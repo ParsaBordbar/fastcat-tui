@@ -1,4 +1,6 @@
-# Push a tag like v0.2.0 to publish: tests, PyPI (trusted publishing), then a GitHub release.
+# Push a tag like v0.2.0 to publish: tests, then PyPI (trusted publishing), the GitHub release, the
+# Homebrew tap and the AUR. The tap and AUR jobs build and test the package before pushing it, and are
+# skipped (with a notice) until their secrets exist: see packaging/README.md.
 name: release
 
 on:
@@ -42,7 +44,7 @@ jobs:
       - uses: pypa/gh-action-pypi-publish@release/v1
 
   github-release:
-    needs: pypi
+    needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -55,3 +57,93 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --generate-notes
+
+  homebrew:
+    needs: github-release
+    runs-on: macos-latest
+    env:
+      TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+    steps:
+      - id: check
+        run: |
+          if [ -z "$TAP_TOKEN" ]; then
+            echo "::notice::HOMEBREW_TAP_TOKEN is not set, skipping the Homebrew tap"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.check.outputs.enabled
+      - name: Update the formula, build and test it
+        if: steps.check.outputs.enabled
+        run: |
+          packaging/update.sh "${GITHUB_REF_NAME#v}"
+          git clone "https://x-access-token:$TAP_TOKEN@github.com/ParsaBordbar/homebrew-tap.git" tap
+          mkdir -p tap/Formula
+          cp packaging/homebrew/fastcat-tui.rb tap/Formula/
+          cd tap
+          git config user.name "Parsa Bordbar"
+          git config user.email "parsab71@gmail.com"
+          git add Formula/fastcat-tui.rb
+          git diff --cached --quiet || git commit -m "fastcat-tui ${GITHUB_REF_NAME#v}"
+          brew tap parsabordbar/tap "$PWD"
+          brew install --build-from-source parsabordbar/tap/fastcat-tui
+          brew test parsabordbar/tap/fastcat-tui
+          brew audit --strict parsabordbar/tap/fastcat-tui
+      - name: Push the tap
+        if: steps.check.outputs.enabled
+        run: git -C tap push origin HEAD
+
+  aur:
+    needs: github-release
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+    env:
+      AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
+    steps:
+      - id: check
+        run: |
+          if [ -z "$AUR_SSH_KEY" ]; then
+            echo "::notice::AUR_SSH_KEY is not set, skipping the AUR"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Install build tools
+        if: steps.check.outputs.enabled
+        run: |
+          pacman -Syu --noconfirm --needed git openssh python python-build python-installer python-setuptools \
+            python-wheel python-pytest fastfetch
+      - uses: actions/checkout@v4
+        if: steps.check.outputs.enabled
+      - name: Update the PKGBUILD, build and test it
+        if: steps.check.outputs.enabled
+        run: |
+          packaging/update.sh "${GITHUB_REF_NAME#v}"
+          useradd -m builder
+          cp -r packaging/aur /home/builder/pkg
+          chown -R builder /home/builder/pkg
+          cd /home/builder/pkg
+          sudo -u builder makepkg --printsrcinfo > .SRCINFO
+          sudo -u builder makepkg --noconfirm --cleanbuild
+      - name: Push to the AUR
+        if: steps.check.outputs.enabled
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$AUR_SSH_KEY" > ~/.ssh/aur
+          chmod 600 ~/.ssh/aur
+          # Host key from ssh-keyscan, checked against the fingerprint published on aur.archlinux.org.
+          echo "aur.archlinux.org ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEuBKrPzbawxA/k2g6NcyV5jmqwJ2s+zpgZGZ7tpLIcN" \
+            > ~/.ssh/known_hosts
+          export GIT_SSH_COMMAND="ssh -i ~/.ssh/aur -o IdentitiesOnly=yes"
+          git clone ssh://aur@aur.archlinux.org/fastcat-tui.git aur
+          cp /home/builder/pkg/PKGBUILD /home/builder/pkg/.SRCINFO aur/
+          cd aur
+          git config user.name "Parsa Bordbar"
+          git config user.email "parsab71@gmail.com"
+          git checkout -B master
+          git add PKGBUILD .SRCINFO
+          if git diff --cached --quiet; then
+            echo "AUR already up to date"
+          else
+            git commit -m "${GITHUB_REF_NAME#v}"
+            git push origin master
+          fi
